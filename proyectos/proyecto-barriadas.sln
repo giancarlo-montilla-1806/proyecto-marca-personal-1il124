@@ -1,0 +1,192 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+
+
+namespace AbdielProyecto09
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            this.Text = "Taller 09: dgv combo box grabar archivos txt proy Barriadas";
+
+            lblPC.Text = Environment.MachineName;
+            lblUsuario.Text = Environment.UserName;
+            lblIP.Text = ObtenerIP();
+
+            timer1.Interval = 1000;
+            timer1.Start();
+
+            cmbProyecto.Items.AddRange(new string[]
+            {
+                "Proy Chorrera 1", "Proy Chepo # 2", "Proy Capira # 3",
+                "Proy Villa Lucre4", "Proy Sta Maria5"
+            });
+            cmbModelo.Items.AddRange(new string[]
+            {
+                "A-1 3Recamaras", "A-2 2Recamaras",
+                "B-1 2Recamaras +g", "B-2 3Recamaras +g"
+            });
+            cmbMaterial.Items.AddRange(new string[]
+            {
+                "A-Electrico", "B-Techos", "C-Construccion",
+                "D-Ferreteria", "F-Hogar"
+            });
+
+            dgv1.Columns.Add("Proyecto", "# Proyecto");
+            dgv1.Columns.Add("Modelo", "Modelo de Casa");
+            dgv1.Columns.Add("Material", "Tipo Material");
+            dgv1.Columns.Add("Detalle", "Material Usado");
+            dgv1.Columns.Add("Cantidad", "Cantidad");
+            dgv1.Columns.Add("Costo", "Costo en $");
+            dgv1.Columns.Add("Precio", "Precio referencia $");
+
+            ActualizarConteo();
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            lblHora.Text = DateTime.Now.ToString("HH:mm:ss");
+        }
+
+        private void btnAgregar_Click(object sender, EventArgs e)
+        {
+            if (cmbProyecto.Text == "" || cmbModelo.Text == "" || cmbMaterial.Text == "")
+            {
+                MessageBox.Show("Debe seleccionar Proyecto, Modelo y Tipo Material.",
+                    "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!int.TryParse(txtCantidad.Text, out int cantidad) ||
+                !decimal.TryParse(txtCosto.Text, out decimal costo) ||
+                !decimal.TryParse(txtPrecio.Text, out decimal precio))
+            {
+                MessageBox.Show("Cantidad, Costo y Precio deben ser numéricos.",
+                    "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            dgv1.Rows.Add(
+                cmbProyecto.Text,
+                cmbModelo.Text,
+                cmbMaterial.Text,
+                txtDetalle.Text.Trim(),
+                cantidad,
+                costo,
+                precio
+            );
+
+            txtDetalle.Clear();
+            txtCantidad.Clear();
+            txtCosto.Clear();
+            txtPrecio.Clear();
+            cmbProyecto.SelectedIndex = -1;
+            cmbModelo.SelectedIndex = -1;
+            cmbMaterial.SelectedIndex = -1;
+            cmbProyecto.Focus();
+
+            ActualizarConteo();
+        }
+
+        private void btnLimpiar_Click(object sender, EventArgs e)
+        {
+            dgv1.Rows.Clear();
+            txtDetalle.Clear();
+            txtCantidad.Clear();
+            txtCosto.Clear();
+            txtPrecio.Clear();
+            cmbProyecto.SelectedIndex = -1;
+            cmbModelo.SelectedIndex = -1;
+            cmbMaterial.SelectedIndex = -1;
+            ActualizarConteo();
+        }
+
+        private void btnGrabar_Click(object sender, EventArgs e)
+        {
+            if (dgv1.Rows.Count == 0)
+            {
+                MessageBox.Show("No hay datos para grabar.", "Aviso",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "Archivo TXT|*.txt|Archivo CSV|*.csv";
+            sfd.FileName = "Datos_Barriada";
+
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                using (StreamWriter sw = new StreamWriter(sfd.FileName))
+                {
+                    sw.WriteLine("Proyecto,Modelo,Tipo Material,Material Usado," +
+                                 "Cantidad,Costo $,Precio referencia $");
+
+                    foreach (DataGridViewRow row in dgv1.Rows)
+                    {
+                        if (!row.IsNewRow)
+                        {
+                            string linea = "";
+                            for (int i = 0; i < dgv1.Columns.Count; i++)
+                            {
+                                linea += row.Cells[i].Value?.ToString();
+                                if (i < dgv1.Columns.Count - 1) linea += ",";
+                            }
+                            sw.WriteLine(linea);
+                        }
+                    }
+                }
+                MessageBox.Show("Archivo guardado correctamente.", "Éxito",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void btnReporte_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Archivo TXT|*.txt|Archivo CSV|*.csv";
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                string contenido = File.ReadAllText(ofd.FileName);
+                MessageBox.Show(contenido, "Reporte Secuencial - " + ofd.FileName,
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void btnSalir_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("¿Desea salir de la aplicación?", "Salir",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                Application.Exit();
+            }
+        }
+
+        private void ActualizarConteo()
+        {
+            txtConteo.Text = dgv1.Rows.Count.ToString();
+        }
+        private string ObtenerIP()
+        {
+            string ipx = "N/D";
+            foreach (System.Net.IPAddress ip in System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName()))
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    ipx = ip.ToString();
+            return ipx;
+        }
+    }
+}
